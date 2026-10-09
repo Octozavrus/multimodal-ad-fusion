@@ -33,7 +33,7 @@ per-modality normalisation: foreground z-score, clip +/-5, rescale to [0,1]
 |---|---|
 | `preprocessing` | Pure NumPy/SciPy helpers (bounding box, resizing, normalisation, Dice, ROI crop); file discovery and labels; SimpleITK I/O and registration; the per-subject chain; the resumable batch runner |
 | `synthetic` | Phantom T1/PET pairs with known misalignment, written as an ADNI-like folder tree |
-| `cli` | `preprocess`, `synth` |
+| `cli` | `preprocess`, `qc`, `synth` |
 
 SimpleITK is imported only inside the functions that need it, so the
 numerical helpers can be tested and reused without it.

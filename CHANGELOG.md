@@ -13,6 +13,8 @@ First release of the preprocessing module used for the SIST 2026 paper.
   one T1-derived bounding box for both scans, resampling to a common shape,
   per-modality normalisation, registration Dice, `cache_manifest.csv` and
   `preprocess_summary.json`. Runs are resumable.
+- `adfusion qc`: registration Dice statistics and the subjects below a
+  threshold, with a `--strict` exit code for use as a quality gate.
 - `adfusion synth`: synthetic raw NIfTI scans (T1 and a blurred, shifted and
   rotated PET) with a label file, so the whole module, including
   registration, can run without patient data.

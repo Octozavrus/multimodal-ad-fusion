@@ -2,12 +2,14 @@
 
 Commands
     preprocess   co-register, crop, resample and normalise paired T1 and FDG-PET scans
+    qc           summarise registration quality from a cache manifest
     synth        write synthetic raw scans for a demonstration (no patient data needed)
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import logging
 import sys
@@ -45,6 +47,28 @@ def _cmd_preprocess(a) -> int:
     return 0
 
 
+def qc_report(manifest: str | Path, threshold: float = 0.5) -> dict:
+    """Registration Dice statistics and the subjects below ``threshold``."""
+    with open(manifest, newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    vals = [(r["subject"], float(r["reg_dice"])) for r in rows if r.get("reg_dice")]
+    dice = [d for _, d in vals]
+    return {
+        "n_subjects": len(rows),
+        "n_with_dice": len(dice),
+        "dice_mean": round(sum(dice) / len(dice), 4) if dice else None,
+        "dice_min": round(min(dice), 4) if dice else None,
+        "dice_max": round(max(dice), 4) if dice else None,
+        "below_threshold": sorted(s for s, d in vals if d < threshold),
+    }
+
+
+def _cmd_qc(a) -> int:
+    rep = qc_report(a.manifest, a.threshold)
+    print(json.dumps(rep, indent=2))
+    return 1 if (a.strict and rep["below_threshold"]) else 0
+
+
 def _cmd_synth(a) -> int:
     from .synthetic import make_synthetic_raw
 
@@ -73,6 +97,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--clip-sigma", type=float, default=5.0, help="z-score clipping limit")
     s.add_argument("--rigid-only", action="store_true", help="skip the affine stage")
     s.set_defaults(func=_cmd_preprocess)
+
+    s = sub.add_parser("qc", help="registration quality summary")
+    s.add_argument("manifest", help="cache_manifest.csv written by preprocess")
+    s.add_argument("--threshold", type=float, default=0.5)
+    s.add_argument("--strict", action="store_true", help="exit with 1 if any subject is below")
+    s.set_defaults(func=_cmd_qc)
 
     s = sub.add_parser("synth", help="write synthetic raw scans")
     s.add_argument("--out", required=True)

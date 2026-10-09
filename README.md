@@ -49,6 +49,7 @@ pip install -e ".[dev]"
 ```bash
 adfusion synth      --out demo/raw --n 6
 adfusion preprocess --raw demo/raw --labels demo/raw/labels.csv --out demo/cache --shape 48
+adfusion qc         demo/cache/cache_manifest.csv
 ```
 
 The synthetic scans are brain-like phantoms in which the "PET" is blurred,
@@ -62,8 +63,9 @@ do. They are not anatomical.
    and keep the image-search CSV exports (they contain `Subject` and `Group`).
 2. Run
    `adfusion preprocess --raw /path/to/ADNI --labels mri_export.csv pet_export.csv --out work/cache`
-3. Check `preprocess_summary.json` and inspect subjects with a low `reg_dice`
-   in `cache_manifest.csv`.
+3. Check registration quality:
+   `adfusion qc work/cache/cache_manifest.csv --threshold 0.5`
+   and inspect any subject listed below the threshold.
 
 Keep `work/` outside the repository or rely on `.gitignore`; the data guard
 in CI rejects imaging files and real subject IDs.
@@ -73,6 +75,7 @@ in CI rejects imaging files and real subject IDs.
 | Command | Purpose |
 |---|---|
 | `adfusion preprocess` | Co-register, crop, resample, normalise, record Dice. Options: `--shape`, `--template`, `--rigid-only`, `--fg-frac`, `--clip-sigma` |
+| `adfusion qc` | Dice statistics and subjects below a threshold; `--strict` exits with 1 if any are below |
 | `adfusion synth` | Write synthetic raw scans and a label file |
 
 ### Output of `adfusion preprocess`
@@ -128,7 +131,7 @@ python -m build                         # sdist and wheel
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| [`ci.yml`](.github/workflows/ci.yml) | push to `main`, pull requests, manual | lint + format + data guard → tests on Python 3.10–3.13 with coverage gate (85%) → synthetic end-to-end run and wheel build; results and wheel uploaded as artifacts |
+| [`ci.yml`](.github/workflows/ci.yml) | push to `main`, pull requests, manual | lint + format + data guard → tests on Python 3.10–3.13 with coverage gate (85%) → synthetic end-to-end run with a registration quality gate, and wheel build; results and wheel uploaded as artifacts |
 | [`release.yml`](.github/workflows/release.yml) | tag `v*.*.*` | tag/version check → tests → build → GitHub Release with the wheel and sdist |
 
 ## Citation

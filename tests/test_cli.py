@@ -1,4 +1,4 @@
-"""End-to-end tests: synthetic raw scans -> preprocess -> cache."""
+"""End-to-end tests: synthetic raw scans -> preprocess -> cache -> QC."""
 
 import csv
 import json
@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from adfusion import preprocessing as P
-from adfusion.cli import main
+from adfusion.cli import main, qc_report
 from adfusion.synthetic import make_synthetic_raw, synthetic_subject
 
 sitk = pytest.importorskip("SimpleITK")
@@ -63,6 +63,21 @@ def test_preprocess_end_to_end(raw, tmp_path, capsys):
     assert main(args) == 0
     again = json.loads(capsys.readouterr().out)
     assert again["dice_mean"] == pytest.approx(summary["dice_mean"])
+
+
+def test_qc_report_and_strict_exit(tmp_path, capsys):
+    man = tmp_path / "cache_manifest.csv"
+    man.write_text(
+        "subject,label,mri,pet,reg_dice\n"
+        "000_S_0001,AD,a,b,0.81\n000_S_0002,CN,a,b,0.42\n000_S_0003,CN,a,b,\n"
+    )
+    rep = qc_report(man, threshold=0.5)
+    assert rep["n_subjects"] == 3 and rep["n_with_dice"] == 2
+    assert rep["below_threshold"] == ["000_S_0002"]
+    assert rep["dice_min"] == 0.42
+    assert main(["qc", str(man)]) == 0
+    assert main(["qc", str(man), "--strict"]) == 1
+    capsys.readouterr()
 
 
 def test_synth_command(tmp_path, capsys):

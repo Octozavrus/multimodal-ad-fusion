@@ -80,6 +80,8 @@ jobs:
         run: adfusion synth --out demo/raw --n 6
       - name: Preprocess (co-registration, crop, resampling, normalisation)
         run: adfusion preprocess --raw demo/raw --labels demo/raw/labels.csv --out demo/cache --shape 48
+      - name: Registration quality gate
+        run: adfusion qc demo/cache/cache_manifest.csv --threshold 0.5 --strict
       - uses: actions/upload-artifact@v4
         with:
           name: smoke-results
