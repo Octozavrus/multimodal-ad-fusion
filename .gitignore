@@ -1,0 +1,42 @@
+# ---- data: never commit (ADNI data use agreement) ----
+data/
+work/
+demo/
+*.nii
+*.nii.gz
+*.dcm
+*.npy
+*.npz
+*.mgz
+*.img
+*.hdr
+*manifest*.csv
+idaSearch*.csv
+*ADNI*.csv
+results*/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.eggs/
+
+# ---- tools ----
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+junit.xml
+htmlcov/
+.ipynb_checkpoints/
+.DS_Store
+.idea/
+.vscode/
