@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  lint:
+    name: Lint and data guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install "ruff>=0.5"
+      - name: Ruff lint
+        run: ruff check --output-format=github .
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: No imaging data, manifests or ADNI subject IDs in the repository
+        run: python scripts/check_no_data.py
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install package with development extras
+        run: pip install -e ".[dev]"
+      - name: Run tests with coverage
+        run: >-
+          pytest --cov=adfusion --cov-report=term --cov-report=xml
+          --junitxml=junit.xml --cov-fail-under=85
+      - name: Upload test reports
+        if: always() && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            coverage.xml
+            junit.xml
+
+  smoke:
+    name: End-to-end smoke run (synthetic data)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install .
+      - name: Generate synthetic raw scans
+        run: adfusion synth --out demo/raw --n 6
+      - name: Preprocess (co-registration, crop, resampling, normalisation)
+        run: adfusion preprocess --raw demo/raw --labels demo/raw/labels.csv --out demo/cache --shape 48
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results
+          path: |
+            demo/cache/*.csv
+            demo/cache/*.json
+
+  build:
+    name: Build distribution
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          pip install build twine
+          python -m build
+          twine check dist/*
+      - name: Install the wheel in a clean environment
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install dist/*.whl
+          /tmp/venv/bin/adfusion --version
+          /tmp/venv/bin/adfusion synth --out /tmp/raw --n 2
+          /tmp/venv/bin/adfusion preprocess --raw /tmp/raw --labels /tmp/raw/labels.csv --out /tmp/cache --shape 32
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
