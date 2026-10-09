@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the conference paper below."
+title: "adfusion: sMRI and FDG-PET preprocessing for multimodal fusion"
+version: 1.0.0
+date-released: 2026-10-09
+license: MIT
+repository-code: "https://github.com/Octozavrus/multimodal-ad-fusion"
+authors:
+  - family-names: Shakenov
+    given-names: Amirsultan
+    affiliation: "Astana IT University"
+    email: amirsultan2002@gmail.com
+keywords:
+  - Alzheimer's disease
+  - multimodal fusion
+  - structural MRI
+  - FDG-PET
+  - image registration
+  - preprocessing
+preferred-citation:
+  type: conference-paper
+  title: "Comparing Multimodal Fusion Strategies for Alzheimer's Disease Detection Using Structural MRI and FDG-PET"
+  authors:
+    - family-names: Shakenov
+      given-names: Amirsultan
+    - family-names: Zhumadillayeva
+      given-names: Ainur
+  conference:
+    name: "SIST 2026"
+  year: 2026
+  status: in-press
