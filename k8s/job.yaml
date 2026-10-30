@@ -1,0 +1,48 @@
+# Optional Kubernetes deployment (Docker Desktop Kubernetes or Minikube).
+#
+# Runs the containerised pipeline once on synthetic scans as a batch Job.
+# The Jenkinsfile replaces __JOB__ and __IMAGE__ before applying it:
+#
+#   sed -e "s|__JOB__|adfusion-smoke-1|" -e "s|__IMAGE__|adfusion:latest|" k8s/job.yaml | kubectl apply -f -
+#   kubectl wait --for=condition=complete job/adfusion-smoke-1 --timeout=300s
+#   kubectl logs job/adfusion-smoke-1
+#
+# With Minikube, load the local image first: minikube image load adfusion:latest
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __JOB__
+  labels:
+    app.kubernetes.io/name: adfusion
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: adfusion
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: adfusion
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - >-
+              adfusion synth --out /tmp/raw --n 4 &&
+              adfusion preprocess --raw /tmp/raw --labels /tmp/raw/labels.csv
+              --out /tmp/cache --shape 32 &&
+              adfusion synth-cohort --out /tmp/cohort --n 24 --shape 16 &&
+              adfusion train --manifest /tmp/cohort/cache_manifest.csv --out /tmp/results
+              --config /app/configs/smoke.json --models pet intermediate --no-checkpoints
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi

@@ -4,6 +4,21 @@ All notable changes are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `Dockerfile` with `test` and `runtime` targets (CPU-only PyTorch, non-root
+  user, OCI labels, protocol configs in `/app/configs`) and a `.dockerignore`
+  that keeps data out of the build context.
+- `Jenkinsfile`: data guard, lint and tests in the test image (JUnit and
+  coverage reports), runtime image build and a smoke run of preprocessing and
+  training inside it; on `main` an optional Docker Hub push, deployment to a
+  staging container and an optional Kubernetes Job.
+- `ci/`: local Jenkins server (docker compose, plugins, Configuration as Code
+  with the multibranch job), `deploy/compose.staging.yml`, `k8s/job.yaml`,
+  `docs/ci_jenkins.md`.
+- GitHub Actions job that builds and runs the Docker image.
+
 ## [1.1.0] - 2026-10-30
 
 The repository now contains the full research pipeline of the SIST 2026

@@ -1,0 +1,26 @@
+# Local Jenkins server for the adfusion pipeline.
+#
+#   cd ci
+#   copy .env.example .env      (Windows)   |   cp .env.example .env   (macOS/Linux)
+#   docker compose up -d --build
+#   open http://localhost:8080 and log in with the user from .env
+name: adfusion-ci
+
+services:
+  jenkins:
+    build: ./jenkins
+    image: adfusion-jenkins:local
+    container_name: adfusion-jenkins
+    # Root is needed to use the host Docker socket on Docker Desktop.
+    # Acceptable for a local, single-user lab server only.
+    user: root
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:

@@ -102,6 +102,24 @@ jobs:
             demo/results/*.json
             demo/results/*.png
 
+  docker:
+    name: Docker image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build runtime image
+        run: docker build --target runtime --build-arg VCS_REF=${GITHUB_SHA::7} -t adfusion:ci .
+      - name: Run the image on synthetic data
+        run: |
+          docker run --rm adfusion:ci --version
+          docker run --rm adfusion:ci info
+          docker run --rm --entrypoint sh adfusion:ci -c "set -e
+            adfusion synth --out /tmp/raw --n 2
+            adfusion preprocess --raw /tmp/raw --labels /tmp/raw/labels.csv --out /tmp/cache --shape 32
+            adfusion synth-cohort --out /tmp/cohort --n 24 --shape 16
+            adfusion train --manifest /tmp/cohort/cache_manifest.csv --out /tmp/results --config /app/configs/smoke.json --models pet --no-checkpoints"
+
   build:
     name: Build distribution
     needs: test

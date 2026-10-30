@@ -1,0 +1,65 @@
+# Jenkins Configuration as Code for the adfusion CI server.
+# Values in ${...} come from ci/.env (see ci/.env.example); nothing secret is stored here.
+jenkins:
+  systemMessage: "adfusion CI/CD server - configured as code (ci/jenkins/casc.yaml)"
+  numExecutors: 2
+  mode: NORMAL
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID:-admin}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: PUSH_IMAGE
+            value: "${PUSH_IMAGE:-false}"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: dockerhub
+              description: "Docker Hub access token (used only when PUSH_IMAGE=true)"
+              username: "${DOCKERHUB_USER:-unset}"
+              password: "${DOCKERHUB_TOKEN:-unset}"
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+
+jobs:
+  - script: |
+      multibranchPipelineJob('adfusion') {
+        displayName('adfusion (Octozavrus/multimodal-ad-fusion)')
+        description('Builds every branch of the repository with its Jenkinsfile.')
+        branchSources {
+          branchSource {
+            source {
+              git {
+                id('adfusion-github')
+                remote('https://github.com/Octozavrus/multimodal-ad-fusion.git')
+                traits {
+                  gitBranchDiscovery()
+                }
+              }
+            }
+          }
+        }
+        triggers {
+          periodicFolderTrigger {
+            interval('2m')
+          }
+        }
+        orphanedItemStrategy {
+          discardOldItems {
+            numToKeep(10)
+          }
+        }
+      }

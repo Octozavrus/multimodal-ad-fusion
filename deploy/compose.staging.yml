@@ -1,0 +1,39 @@
+# Staging (test) environment, deployed by the "Deploy to staging" stage of the Jenkinsfile.
+#
+# The container runs the whole pipeline on synthetic data (raw scans -> preprocessing
+# -> QC gate, then a synthetic cohort -> nested cross-validation -> figures) and serves
+# the outputs on http://localhost:8081 (cache/ and results/ with the ROC figure).
+# The health check passes only once results/results_summary.csv can be fetched.
+#
+#   IMAGE_TAG=<git sha> docker compose -f deploy/compose.staging.yml up -d --force-recreate
+name: adfusion-staging
+
+services:
+  adfusion:
+    image: adfusion:${IMAGE_TAG:-latest}
+    container_name: adfusion-staging
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        adfusion synth --out /tmp/raw --n 6 &&
+        adfusion preprocess --raw /tmp/raw --labels /tmp/raw/labels.csv
+        --out /tmp/stage/cache --shape 48 &&
+        adfusion qc /tmp/stage/cache/cache_manifest.csv --strict &&
+        adfusion synth-cohort --out /tmp/cohort --n 30 --shape 32 &&
+        adfusion train --manifest /tmp/cohort/cache_manifest.csv --out /tmp/stage/results
+        --config /app/configs/smoke.json --no-checkpoints &&
+        adfusion figures /tmp/stage/results --dpi 100 &&
+        exec python -m http.server 8000 --directory /tmp/stage
+    ports:
+      - "8081:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/results/results_summary.csv')"
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+    restart: unless-stopped

@@ -165,8 +165,13 @@ src/adfusion/        package source (one module per pipeline stage)
 tests/               pytest suite, synthetic data only
 configs/             locked protocol (SIST 2026) and smoke protocol
 scripts/             repository data guard
-docs/                architecture, data policy, reproduction notes
+docs/                architecture, data policy, reproduction notes, Jenkins guide
 .github/workflows/   CI (lint, tests, smoke runs, build) and release
+Dockerfile           test and runtime images
+Jenkinsfile          Jenkins CI/CD pipeline
+ci/                  Jenkins server (docker compose + configuration as code)
+deploy/              staging deployment (docker compose)
+k8s/                 Kubernetes Job
 ```
 
 ## Development
@@ -188,6 +193,20 @@ python -m build                         # sdist and wheel
 |---|---|---|
 | [`ci.yml`](.github/workflows/ci.yml) | push to `main`, pull requests, manual | lint + format + data guard → tests on Python 3.10–3.13 with coverage gate (85%) → synthetic preprocessing and training runs and wheel build, all uploaded as artifacts |
 | [`release.yml`](.github/workflows/release.yml) | tag `v*.*.*` | tag/version check → tests → build → GitHub Release with the wheel and sdist |
+| [`Jenkinsfile`](Jenkinsfile) | every commit on every branch (multibranch scan) | data guard → lint and tests in the test image → runtime image → smoke run of the image (preprocessing and training) → on `main`: optional push to Docker Hub, deployment to a staging container, optional Kubernetes Job |
+
+### Docker
+
+```bash
+docker build --target runtime -t adfusion .
+docker run --rm adfusion --version
+docker run --rm -v "$PWD/work:/data" adfusion preprocess --raw /data/raw --labels /data/labels.csv --out /data/cache
+docker run --rm -v "$PWD/work:/data" adfusion train --manifest /data/cache/cache_manifest.csv --out /data/results --config /app/configs/protocol_sist2026.json
+```
+
+The image contains the full pipeline with CPU-only PyTorch. Data are mounted
+at run time and never copied into an image. The Jenkins server and the
+deployment are described in [docs/ci_jenkins.md](docs/ci_jenkins.md).
 
 ## Citation
 

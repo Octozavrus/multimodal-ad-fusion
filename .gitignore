@@ -40,3 +40,7 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# ---- CI secrets ----
+.env
+reports/
