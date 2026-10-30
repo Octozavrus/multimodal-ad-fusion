@@ -28,14 +28,18 @@ pytest --cov=adfusion
 
 ## Rules
 
-- **Never commit data.** No NIfTI, DICOM, NumPy arrays, ADNI CSV exports,
-  manifests or subject IDs. Use `adfusion synth` for test data.
+- **Never commit data.** No NIfTI, DICOM, NumPy arrays, checkpoints, ADNI
+  CSV exports, manifests or subject IDs. Use `adfusion synth` or
+  `adfusion synth-cohort` for test data.
   Subject IDs in tests must use site `000` (for example `000_S_0001`).
 - Every change in behaviour needs a test. Bug fixes start with a failing test.
 - Public functions have docstrings and type hints.
 - Changes that alter the preprocessed output (registration settings, crop,
   resampling, normalisation) must be noted in `CHANGELOG.md`, because they
   change every result computed downstream.
+- Changes to the evaluation protocol (splits, model selection, metrics) must
+  keep the test fold untouched until the final prediction and must be noted
+  in `CHANGELOG.md`.
 
 ## Releasing
 

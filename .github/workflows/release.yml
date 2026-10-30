@@ -31,7 +31,8 @@ jobs:
 
       - name: Test
         run: |
-          pip install -e ".[dev]"
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[train,dev]"
           python scripts/check_no_data.py
           pytest -q
 

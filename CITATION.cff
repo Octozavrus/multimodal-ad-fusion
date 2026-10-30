@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the conference paper below."
-title: "adfusion: sMRI and FDG-PET preprocessing for multimodal fusion"
-version: 1.0.0
-date-released: 2026-10-09
+title: "adfusion: sMRI + FDG-PET fusion pipeline for Alzheimer's disease"
+version: 1.1.0
+date-released: 2026-10-30
 license: MIT
 repository-code: "https://github.com/Octozavrus/multimodal-ad-fusion"
 authors:
@@ -15,8 +15,8 @@ keywords:
   - multimodal fusion
   - structural MRI
   - FDG-PET
+  - deep learning
   - image registration
-  - preprocessing
 preferred-citation:
   type: conference-paper
   title: "Comparing Multimodal Fusion Strategies for Alzheimer's Disease Detection Using Structural MRI and FDG-PET"

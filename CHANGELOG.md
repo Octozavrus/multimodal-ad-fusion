@@ -4,6 +4,36 @@ All notable changes are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-10-30
+
+The repository now contains the full research pipeline of the SIST 2026
+paper, not only the preprocessing stage.
+
+### Added
+- `adfusion cohort`: intersection of ADNI MRI and PET search exports, one
+  most-processed image per subject and modality.
+- `adfusion roi-cache` and `adfusion mixed`: central-ROI cache and the
+  modality-specific input (ROI MRI with whole-brain PET).
+- `adfusion train`: paired dataset, subject-level stratified nested
+  cross-validation with a leakage check, 3D CNN encoder and seven fusion
+  configurations (MRI only, PET only, early, late, intermediate, hybrid with
+  and without cross-attention), optional capacity matching, inner-validation
+  epoch and threshold selection.
+- Metrics: fold-mean and pooled AUC with bootstrap intervals, paired
+  bootstrap tests and Holm correction; `adfusion figures` (greyscale) and
+  `adfusion info`.
+- `adfusion synth-cohort`: synthetic preprocessed cohort with a planted AD
+  signal for tests and the training smoke run.
+- Protocol files `configs/protocol_sist2026.json` and `configs/smoke.json`;
+  `docs/reproducing_sist2026.md`.
+
+### Changed
+- Training dependencies (PyTorch, scikit-learn, matplotlib) are an optional
+  extra: `pip install "adfusion[train]"`. Preprocessing still installs
+  without them; pandas is now a core dependency (cohort selection).
+- CI installs CPU-only PyTorch, runs the full test suite and adds a
+  synthetic training run and figures to the smoke job.
+
 ## [1.0.0] - 2026-10-09
 
 First release of the preprocessing module used for the SIST 2026 paper.

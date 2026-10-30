@@ -1,18 +1,24 @@
-"""adfusion: preprocessing of paired sMRI and FDG-PET scans for multimodal fusion.
+"""adfusion: a reproducible sMRI + FDG-PET fusion pipeline for Alzheimer's disease.
 
-For every subject the FDG-PET volume is co-registered to the subject's own
-T1-weighted MRI, both volumes are cropped with one T1-derived bounding box,
-resampled to a common shape and intensity-normalised, and the registration
-quality is recorded as a Dice overlap. The output is a cache of paired NumPy
-arrays and a manifest that downstream models can read.
+The package is organised as a pipes-and-filters pipeline. Each stage is a
+separate module with a narrow, testable interface:
 
-    preprocessing  the preprocessing chain and the resumable batch runner
-    synthetic      synthetic raw scans for tests and demonstrations
+    cohort         select subjects that have both modalities (ADNI search exports)
+    preprocessing  co-registration, shared crop, resampling, normalisation, QC
+    variants       derived input caches (ROI crop, modality-specific inputs)
+    data           manifest loading, paired dataset, leakage-safe nested splits
+    models         3D CNN encoder and seven fusion configurations
+    metrics        AUC, bootstrap intervals, paired tests, Holm correction
+    train          nested cross-validation runner
+    figures        greyscale publication figures
+    synthetic      synthetic raw scans and cohorts for tests and demonstrations
     cli            the ``adfusion`` command
 
+Preprocessing needs only NumPy, SciPy, SimpleITK and pandas. The training and
+evaluation stages need the ``train`` extra (PyTorch, scikit-learn, matplotlib).
 No imaging data are distributed with this package.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = ["__version__"]

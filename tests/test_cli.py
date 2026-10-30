@@ -6,6 +6,7 @@ import json
 import numpy as np
 import pytest
 
+from adfusion import __version__
 from adfusion import preprocessing as P
 from adfusion.cli import main, qc_report
 from adfusion.synthetic import make_synthetic_raw, synthetic_subject
@@ -92,6 +93,6 @@ def test_version_and_bad_shape(capsys):
     with pytest.raises(SystemExit) as e:
         main(["--version"])
     assert e.value.code == 0
-    assert "1.0.0" in capsys.readouterr().out
+    assert __version__ in capsys.readouterr().out
     with pytest.raises(SystemExit):
         main(["synth", "--out", "x", "--shape", "4"])

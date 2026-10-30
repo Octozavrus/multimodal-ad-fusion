@@ -1,0 +1,17 @@
+{
+  "models": ["mri", "pet", "intermediate", "hybrid_noattn"],
+  "epochs": 3,
+  "batch_size": 4,
+  "lr": 0.001,
+  "wd": 0.0001,
+  "folds": 3,
+  "inner_frac": 0.25,
+  "repeats": 1,
+  "patience": 0,
+  "capacity_matched": true,
+  "seed": 42,
+  "workers": 0,
+  "n_boot": 200,
+  "device": "cpu",
+  "save_checkpoints": true
+}

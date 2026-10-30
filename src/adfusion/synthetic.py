@@ -1,6 +1,9 @@
-"""Synthetic raw scans for tests and demonstrations.
+"""Synthetic data for tests and demonstrations (no patient data needed).
 
-``make_synthetic_raw`` writes a small ADNI-like folder tree of NIfTI files:
+Two generators are provided.
+
+``make_synthetic_raw`` writes a small ADNI-like folder tree of raw NIfTI files
+for the preprocessing stage:
 
     <out>/000_S_0001/MPRAGE/t1.nii.gz
     <out>/000_S_0001/Coreg_FDG/pet.nii.gz
@@ -12,6 +15,13 @@ matching "PET" is a blurred copy with different contrast that has been
 shifted and slightly rotated, so co-registration has real work to do.
 Site code ``000`` does not exist in ADNI, so these IDs cannot be confused
 with real participants. The volumes are not anatomically realistic.
+
+``make_synthetic_cohort`` writes an already preprocessed cache (paired
+``.npy`` volumes and ``cache_manifest.csv``) for the training stage, with a
+planted, class-dependent signal: AD subjects have reduced "MRI" intensity in
+two small medial blobs (a stand-in for medial temporal atrophy) and reduced
+"PET" uptake in a posterior blob (a stand-in for posterior cingulate and
+parietal hypometabolism). Its subject IDs use the prefix ``SYN``.
 """
 
 from __future__ import annotations
@@ -84,3 +94,73 @@ def make_synthetic_raw(
         w.writeheader()
         w.writerows(rows)
     return out, labels
+
+
+# ---------------------------------------------------------------- preprocessed cohort
+
+
+def _grid(shape):
+    zz, yy, xx = np.meshgrid(*[np.linspace(-1, 1, s) for s in shape], indexing="ij")
+    return zz, yy, xx
+
+
+def _blob(zz, yy, xx, c, r):
+    return np.exp(-(((zz - c[0]) ** 2 + (yy - c[1]) ** 2 + (xx - c[2]) ** 2) / (2 * r**2)))
+
+
+def synthetic_pair(
+    label: int,
+    shape: tuple[int, int, int] = (32, 32, 32),
+    effect: float = 0.5,
+    noise: float = 0.05,
+    rng: np.random.Generator | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return one (MRI, PET) pair in [0, 1] for class ``label`` (0 = CN, 1 = AD)."""
+    rng = rng or np.random.default_rng()
+    zz, yy, xx = _grid(shape)
+    scale = rng.uniform(0.9, 1.05, size=3)
+    brain = (
+        (zz / (0.8 * scale[0])) ** 2 + (yy / (0.85 * scale[1])) ** 2 + (xx / (0.7 * scale[2])) ** 2
+    ) <= 1.0
+    base = brain.astype(np.float32) * 0.8
+
+    mri = base.copy()
+    pet = base.copy() * 0.7 + 0.3 * _blob(zz, yy, xx, (0.0, 0.0, 0.0), 0.5) * brain
+    if label == 1:
+        sev = effect * rng.uniform(0.6, 1.0)
+        for side in (-0.25, 0.25):
+            mri -= sev * _blob(zz, yy, xx, (0.0, -0.1, side), 0.12) * brain
+        pet -= sev * _blob(zz, yy, xx, (0.2, 0.4, 0.0), 0.2) * brain
+    mri += rng.normal(0, noise, shape) * brain
+    pet += rng.normal(0, noise, shape) * brain
+    return (np.clip(mri, 0, 1).astype(np.float32), np.clip(pet, 0, 1).astype(np.float32))
+
+
+def make_synthetic_cohort(
+    out_dir: str | Path,
+    n_subjects: int = 40,
+    shape: tuple[int, int, int] = (32, 32, 32),
+    effect: float = 0.5,
+    seed: int = 0,
+) -> Path:
+    """Write a balanced synthetic cohort and its ``cache_manifest.csv``."""
+    if n_subjects < 4:
+        raise ValueError("need at least 4 subjects")
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed)
+    rows = []
+    for i in range(n_subjects):
+        y = i % 2
+        mri, pet = synthetic_pair(y, shape, effect, rng=rng)
+        sid = f"SYN{i:04d}"
+        pm, pp = out / f"{sid}_MRI.npy", out / f"{sid}_PET.npy"
+        np.save(pm, mri)
+        np.save(pp, pet)
+        rows.append({"subject": sid, "label": "AD" if y else "CN", "mri": pm, "pet": pp})
+    manifest = out / "cache_manifest.csv"
+    with open(manifest, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=["subject", "label", "mri", "pet"])
+        w.writeheader()
+        w.writerows(rows)
+    return manifest

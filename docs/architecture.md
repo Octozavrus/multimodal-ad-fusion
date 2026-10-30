@@ -1,18 +1,34 @@
-# Design
+# Architecture
 
-The tool is one stage of a larger research pipeline (cohort selection →
-**preprocessing** → model training → evaluation). Its job is to turn raw
-downloads into a model-ready cache with a fixed contract, so that every
-downstream model receives spatially aligned, identically shaped inputs.
+The package is a modular monolith organised as a pipes-and-filters pipeline.
+Each stage reads the output of the previous one from disk and writes a new,
+self-describing output, so stages can be rerun independently and their
+contracts can be tested in isolation.
 
-## Contract
+| Stage | Input | Output (contract) |
+|---|---|---|
+| `cohort` | ADNI MRI and PET search exports (CSV) | `cohort_both_modalities.csv`, `best_image_per_subject.csv` |
+| `preprocess` | raw NIfTI or DICOM, label CSVs | `<subject>_MRI.npy`, `<subject>_PET.npy` (float32, [0,1], same shape), `<subject>_qc.json`, `cache_manifest.csv` (subject, label, mri, pet, reg_dice) |
+| `qc` | a `cache_manifest.csv` | Dice summary; exit code 1 under `--strict` if a subject is below the threshold |
+| `roi-cache`, `mixed` | a `cache_manifest.csv` | a new cache and `cache_manifest.csv` with the same columns |
+| `train` | `cache_manifest.csv`, protocol JSON | results CSV/JSON files, checkpoints |
+| `figures` | a results directory | PNG figures |
 
-| | Content |
-|---|---|
-| Input | a folder of NIfTI files or DICOM series whose paths contain an ADNI-style subject ID and a series description; one or more CSV files with `Subject` and `Group` |
-| Output | `<subject>_MRI.npy` and `<subject>_PET.npy` (float32, [0, 1], same shape), `<subject>_qc.json`, `cache_manifest.csv` (subject, label, mri, pet, reg_dice), `preprocess_summary.json` |
+## Dependency direction
 
-## Processing chain (per subject)
+```
+cli ──► cohort
+    ──► preprocessing ◄── variants
+    ──► train ──► data, models, metrics
+    ──► figures
+synthetic (used by cli and tests only)
+```
+
+Lower layers never import higher ones. `preprocessing`, `metrics` and
+`synthetic` do not import PyTorch; SimpleITK is imported only inside the
+functions that need it.
+
+## Preprocessing chain (per subject)
 
 ```
 read T1, read PET (NIfTI or DICOM; 4D PET is averaged over frames)
@@ -27,18 +43,23 @@ linear resampling to the target shape (default 96^3)
 per-modality normalisation: foreground z-score, clip +/-5, rescale to [0,1]
 ```
 
-## Module structure
+## Evaluation protocol
 
-| Module | Responsibility |
-|---|---|
-| `preprocessing` | Pure NumPy/SciPy helpers (bounding box, resizing, normalisation, Dice, ROI crop); file discovery and labels; SimpleITK I/O and registration; the per-subject chain; the resumable batch runner |
-| `synthetic` | Phantom T1/PET pairs with known misalignment, written as an ADNI-like folder tree |
-| `cli` | `preprocess`, `qc`, `synth` |
+```
+for each repeat r:
+    outer StratifiedKFold(k=5, seed=42+r)          -> train_outer | test
+        inner StratifiedKFold(1/inner_frac) on train_outer -> train | val
+        assert no subject in two partitions
+        fit on train; keep the epoch with best val AUC; tune threshold on val
+        predict test once
+pooled AUC + bootstrap CI over all test predictions
+fold-mean +/- sd over per-fold AUCs
+paired bootstrap for every model pair on identical subjects, Holm-adjusted
+```
 
-SimpleITK is imported only inside the functions that need it, so the
-numerical helpers can be tested and reused without it.
+The test fold is never used to choose an epoch, a threshold or a model.
 
-## Design decisions
+## Design decisions (preprocessing)
 
 - **One crop for both modalities.** Cropping each modality separately would
   destroy the voxel correspondence that registration created.

@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adfusion"
-version = "1.0.0"
-description = "Preprocessing of paired sMRI and FDG-PET scans for multimodal fusion in Alzheimer's disease research"
+version = "1.1.0"
+description = "Reproducible sMRI + FDG-PET pipeline for Alzheimer's disease classification: preprocessing, fusion models and evaluation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Amirsultan Shakenov", email = "amirsultan2002@gmail.com" }]
-keywords = ["alzheimer", "neuroimaging", "preprocessing", "registration", "MRI", "PET"]
+keywords = ["alzheimer", "neuroimaging", "multimodal fusion", "registration", "MRI", "PET", "deep learning"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -23,9 +23,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-dependencies = ["numpy>=1.24", "scipy>=1.10", "SimpleITK>=2.3"]
+dependencies = ["numpy>=1.24", "scipy>=1.10", "SimpleITK>=2.3", "pandas>=2.0"]
 
 [project.optional-dependencies]
+train = ["torch>=2.3", "scikit-learn>=1.3", "matplotlib>=3.7"]
 dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.5", "build>=1.0", "twine>=5.0"]
 
 [project.scripts]
@@ -44,6 +45,7 @@ adfusion = ["py.typed"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = ["slow: end-to-end tests that train small models (deselect with -m 'not slow')"]
 
 [tool.coverage.run]
 source = ["adfusion"]
